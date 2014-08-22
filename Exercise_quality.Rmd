@@ -2,7 +2,7 @@
 title: "Exercise Quality"
 author: "Jason Wilkinson"
 date: "Thursday, August 21, 2014"
-output: md_document
+output: html_document
 ---
 
 ##Synopsis
@@ -10,7 +10,7 @@ output: md_document
   The purpose of this report is to predict the how well exercises were performed using data collected in relation to personal activity.  More information as to the source of the data can be found here: http://groupware.les.inf.puc-rio.br/har . A machine learning algorith built through cross validaiton and the random forest method seems most ideal for this. 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(cache=TRUE)
+#knitr::opts_chunk$set(cache=TRUE)
 ```
 
 
@@ -92,7 +92,7 @@ modfit$finalModel
 
 ```
 
-Using accuracy to select the optimal model, 27 predictors were included.
+Using accuracy to select the optimal model, 27 predictors were included, via the Random Forest ("rf") method, which again uses cross validation internally though the "cv" method. Random forests are an ensemble learning method for classification (and regression) that operate by constructing a multitude of decision trees at training time and outputting the class that is the mode of the classes output by individual trees.
 
 ```{r}
 varImpPlot(modfit$finalModel, main = "Predictors Sorted by Importance", pch = 16, cex = .8, col="purple", type = 1, n.var = 27)
