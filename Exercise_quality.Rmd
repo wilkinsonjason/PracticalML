@@ -1,0 +1,126 @@
+---
+title: "Exercise Quality"
+author: "Jason Wilkinson"
+date: "Thursday, August 21, 2014"
+output: md_document
+---
+
+##Synopsis
+
+  The purpose of this report is to predict the how well exercises were performed using data collected in relation to personal activity.  More information as to the source of the data can be found here: http://groupware.les.inf.puc-rio.br/har . A machine learning algorith built through cross validaiton and the random forest method seems most ideal for this. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+
+```{r}
+library(caret)
+set.seed(1)
+
+filename <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+filename2 <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+temp <- tempfile()
+download.file(filename, temp)
+traindf <- read.csv(temp)
+
+temp2 <- tempfile()
+download.file(filename2, temp2)
+validation <- read.csv(temp2)
+
+```
+
+##Data Cleaning
+
+First, the data in the training set required a little cleaning, removing NA columns and sparse variables that would have little impact on the model, and also timestamp and name variables.
+
+```{r}
+
+#NA column removal
+
+NAcols <- rep(FALSE, ncol(traindf))
+
+for (i in 1:ncol(traindf)) {
+  if( sum(is.na(traindf[,i])) > 500) {
+    NAcols[i] <- TRUE
+  }
+}
+traindf2 <- traindf[,!NAcols] 
+
+#near zero variable removal
+nsv <- nearZeroVar(traindf2, saveMetrics = TRUE)
+zerocols <- rep(FALSE, ncol(traindf2))
+
+for (i in 1:ncol(traindf2)){
+  if(nsv[i,4]){
+    zerocols[i] <- TRUE
+  }
+}
+traindf3 <- traindf2[,!zerocols]
+
+#remove timestamp, name etc
+traindf4 <- traindf3[,-c(1:5)]
+
+```
+
+
+
+##Cross Validation
+
+```{r}
+
+inTrain <- createDataPartition(traindf4$classe, p = .75, list = FALSE)
+training <- traindf4[inTrain,]
+testing <- traindf4[-inTrain,]
+dimtrain <- dim(training)
+dimtest <- dim(testing)
+
+```
+
+The data supplied has already been divided once into a test set with 20 observations and training set with 19622 observations. Henceforth, the original test set will be used only as a validation set in the submission phase and the training set will be divided into a training set with `r dimtrain[1]` observations and a test set with `r dimtest[1]` for proper crossvalidation and to test the validity and accuracy of our model.
+
+
+```{r}
+
+fitcontrol <- trainControl(method = "cv", number = 3)
+modfit <- train(classe~., data = training, method = "rf", prox = TRUE, trControl = fitcontrol, importance = TRUE)
+
+modfit
+
+modfit$finalModel
+
+
+```
+
+Using accuracy to select the optimal model, 27 predictors were included.
+
+```{r}
+varImpPlot(modfit$finalModel, main = "Predictors Sorted by Importance", pch = 16, cex = .8, col="purple", type = 1, n.var = 27)
+
+```
+
+
+##Conclusions and Accuracy Prediction
+
+The model was then applied to the heldout testing set to get a prediction for accuracy:
+
+
+```{r}
+
+predic <- predict(modfit, newdata = testing)
+confMat <- confusionMatrix(predic, testing$classe)
+confMat$table
+accuracy <- (sum((predic==testing$classe))/dim(testing)[1])*100
+
+oob <- 100 - accuracy
+
+```
+
+**The anticipated accuracy is `r accuracy` % and out of sample error rate is `r oob` %.**
+
+As can be seen from the confusion matrices for the training, and testing sets, the random forest method does an excellent job of anticipating out of sample error, as they are very similar.
+
+
+
+
+
